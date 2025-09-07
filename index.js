@@ -61,7 +61,12 @@ client.once('ready', async () => {
   const commands = [
     new SlashCommandBuilder()
       .setName('duo')
-      .setDescription('Sends a duo request to another user.'),
+      .setDescription('Sends a duo request to another user.')
+      .addUserOption(option =>
+        option.setName('username')
+          .setDescription('The user to send the duo request to.')
+          .setRequired(true)
+      ),
     new SlashCommandBuilder()
       .setName('duobotrole')
       .setDescription('Sets which roles can access duo channels.')

@@ -37,9 +37,10 @@ const token = process.env.TOKEN;
 const clientId = process.env.CLIENT_ID;
 const guildId = process.env.GUILD_ID;
 
-// In-memory storage for roles that can access duo channels.
+// In-memory storage for roles that can access duo channels and roles that can use the /duo command.
 // This data will be reset whenever the bot restarts.
-const duoBotRoles = new Set();
+const channelAdminRoles = new Set();
+const duoAllowedRoles = new Set();
 
 // Create a new Discord client instance with the required intents.
 // Intents define what events and data your bot can access.
@@ -60,15 +61,28 @@ client.once('ready', async () => {
   const commands = [
     new SlashCommandBuilder()
       .setName('duo')
-      .setDescription('Sends a duo request to another user.')
-      .addUserOption(option =>
-        option.setName('username')
-          .setDescription('The user to send the duo request to.')
-          .setRequired(true)
-      ),
+      .setDescription('Sends a duo request to another user.'),
     new SlashCommandBuilder()
       .setName('duobotrole')
       .setDescription('Sets which roles can access duo channels.')
+      .addRoleOption(option =>
+        option.setName('role1')
+          .setDescription('The first role.')
+          .setRequired(true)
+      )
+      .addRoleOption(option =>
+        option.setName('role2')
+          .setDescription('The second role.')
+          .setRequired(false)
+      )
+      .addRoleOption(option =>
+        option.setName('role3')
+          .setDescription('The third role.')
+          .setRequired(false)
+      ),
+    new SlashCommandBuilder()
+      .setName('duo_allowed_role')
+      .setDescription('Sets which roles are allowed to use the /duo command.')
       .addRoleOption(option =>
         option.setName('role1')
           .setDescription('The first role.')
@@ -105,6 +119,17 @@ client.on('interactionCreate', async interaction => {
     const targetUser = interaction.options.getUser('username');
     const initiator = interaction.user;
 
+    // Check if the user is allowed to use the /duo command
+    const memberRoles = interaction.member.roles.cache;
+    const isAllowed = Array.from(duoAllowedRoles).some(roleId => memberRoles.has(roleId));
+
+    if (duoAllowedRoles.size > 0 && !isAllowed) {
+      return interaction.reply({
+        content: 'You do not have the required role to use this command.',
+        ephemeral: true
+      });
+    }
+
     // Prevent a user from sending a duo request to themselves
     if (targetUser.id === initiator.id) {
       return interaction.reply({ content: 'You cannot send a duo request to yourself!', ephemeral: true });
@@ -131,33 +156,68 @@ client.on('interactionCreate', async interaction => {
 
     const row = new ActionRowBuilder().addComponents(acceptButton, declineButton);
 
-    // Send the duo request message to the target user and the channel
-    await interaction.reply({
-      content: `Duo request sent to ${targetUser}!`,
-      embeds: [duoRequestEmbed],
-      components: [row]
-    });
+    // Send the duo request as a private message (DM) to the target user.
+    try {
+      await targetUser.send({
+        embeds: [duoRequestEmbed],
+        components: [row]
+      });
+      // Reply to the sender privately (ephemerally)
+      await interaction.reply({
+        content: `Your duo request has been sent to ${targetUser}!`,
+        ephemeral: true
+      });
+    } catch (error) {
+      console.error('Failed to send DM to target user:', error);
+      await interaction.reply({
+        content: `Failed to send the duo request to ${targetUser}. They may have DMs disabled.`,
+        ephemeral: true
+      });
+    }
   }
 
   // Handle the /duobotrole command
   if (interaction.isChatInputCommand() && interaction.commandName === 'duobotrole') {
     // Clear the existing roles before adding new ones
-    duoBotRoles.clear();
+    channelAdminRoles.clear();
 
     const role1 = interaction.options.getRole('role1');
     const role2 = interaction.options.getRole('role2');
     const role3 = interaction.options.getRole('role3');
 
     // Add the selected roles to the in-memory set
-    duoBotRoles.add(role1.id);
-    if (role2) duoBotRoles.add(role2.id);
-    if (role3) duoBotRoles.add(role3.id);
+    channelAdminRoles.add(role1.id);
+    if (role2) channelAdminRoles.add(role2.id);
+    if (role3) channelAdminRoles.add(role3.id);
 
     // Get the names of the roles for the confirmation message
     const roleNames = [role1, role2, role3].filter(r => r).map(r => r.name).join(', ');
 
     await interaction.reply({
       content: `Access to duo channels has been granted to the following roles: **${roleNames}**. Note: This setting will be reset if the bot restarts.`,
+      ephemeral: true
+    });
+  }
+
+  // Handle the new /duo_allowed_role command
+  if (interaction.isChatInputCommand() && interaction.commandName === 'duo_allowed_role') {
+    // Clear the existing roles before adding new ones
+    duoAllowedRoles.clear();
+
+    const role1 = interaction.options.getRole('role1');
+    const role2 = interaction.options.getRole('role2');
+    const role3 = interaction.options.getRole('role3');
+
+    // Add the selected roles to the in-memory set
+    duoAllowedRoles.add(role1.id);
+    if (role2) duoAllowedRoles.add(role2.id);
+    if (role3) duoAllowedRoles.add(role3.id);
+
+    // Get the names of the roles for the confirmation message
+    const roleNames = [role1, role2, role3].filter(r => r).map(r => r.name).join(', ');
+
+    await interaction.reply({
+      content: `Users with the following roles are now allowed to use the /duo command: **${roleNames}**. Note: This setting will be reset if the bot restarts.`,
       ephemeral: true
     });
   }
@@ -191,7 +251,7 @@ client.on('interactionCreate', async interaction => {
               id: targetUser.id,
               allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
             },
-            ...Array.from(duoBotRoles).map(roleId => ({
+            ...Array.from(channelAdminRoles).map(roleId => ({
               id: roleId,
               allow: [PermissionsBitField.Flags.ViewChannel],
             })),

@@ -419,9 +419,13 @@ client.on("interactionCreate", async (interaction) => {
         }
     } else if (interaction.isButton()) {
         if (interaction.customId === "agree_to_tryout") {
+            await interaction.deferReply({ ephemeral: true });
+
             await interaction.channel.send(
                 `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
             );
+
+            await interaction.deleteReply();
         }
     }
 });

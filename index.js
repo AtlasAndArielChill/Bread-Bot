@@ -350,7 +350,7 @@ client.on("interactionCreate", async (interaction) => {
                     "and finally Sniper Only Duel."
                 )
                 .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 4096 }))
-                .setImage("https://cdn.discordapp.com/attachments/1327154745076613153/1415369159990317236/Tryouts_Process_1.png?ex=68c2f4c0&is=68c1a340&hm=197ce199aba26fcfc1419b5fb85e95c13356c817723c454ad890528a7364f20b&"); // Added image here
+                .setImage("https://cdn.discordapp.com/attachments/1327154745076613153/1415369159990317236/Tryouts_Process_1.png?ex=68c2f4c0&is=68c1a340&hm=197ce199aba26fcfc1419b5fb85e95c13356c817723c454ad890528a7364f20b&");
 
             const button = new ButtonBuilder()
                 .setCustomId("agree_to_tryout")
@@ -422,11 +422,6 @@ client.on("interactionCreate", async (interaction) => {
             await interaction.channel.send(
                 `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
             );
-
-            await interaction.reply({
-                content: "Your agreement has been noted.",
-                ephemeral: true,
-            });
         }
     }
 });

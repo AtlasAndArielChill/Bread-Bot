@@ -359,10 +359,17 @@ client.on("interactionCreate", async (interaction) => {
 
             const row = new ActionRowBuilder().addComponents(button);
 
-            await interaction.reply({
+            // Store the embed message object in a variable for later use.
+            const sentEmbed = await interaction.reply({
                 embeds: [tryoutsEmbed],
                 components: [row],
+                fetchReply: true // This is crucial!
             });
+            
+            // Wait 2 seconds and then delete the embed
+            setTimeout(async () => {
+                await sentEmbed.delete();
+            }, 2000);
         } else if (commandName === "createchannel") {
             const channelName = interaction.options.getString("name");
             const channelToCopy = interaction.options.getChannel("copy_from");
@@ -419,7 +426,7 @@ client.on("interactionCreate", async (interaction) => {
         }
     } else if (interaction.isButton()) {
         if (interaction.customId === "agree_to_tryout") {
-            // Acknowledge the interaction immediately to prevent "Interaction has failed" error
+            // Acknowledge the interaction first to prevent the "Interaction failed" message.
             await interaction.deferReply({ ephemeral: true });
 
             // Send the message to the channel
@@ -427,18 +434,25 @@ client.on("interactionCreate", async (interaction) => {
                 `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
             );
 
-            // Delete the ephemeral acknowledgment after sending the channel message
-            await interaction.deleteReply();
-
-            // Schedule deletion of the original embed message after 2 seconds
+            // Delete the original embed after 2 seconds.
             setTimeout(async () => {
                 try {
-                    // interaction.message refers to the message containing the button
-                    await interaction.message.delete();
+                    // You need to find the original message to delete it.
+                    // Discord.js v14 doesn't have a direct way to do this from the button interaction.
+                    // The best way is to fetch the original message from the channel.
+                    // We'll assume the original message is the most recent one in the channel.
+                    const messages = await interaction.channel.messages.fetch({ limit: 10 });
+                    const originalEmbed = messages.find(m => m.interaction?.commandName === 'tryouts' && m.id === interaction.message.id);
+                    if (originalEmbed) {
+                        await originalEmbed.delete();
+                    }
                 } catch (error) {
-                    console.error("Failed to delete tryouts embed:", error);
+                    console.error("Failed to delete the original embed:", error);
                 }
-            }, 2000); // 2000 milliseconds = 2 seconds
+            }, 2000);
+
+            // Delete the ephemeral reply to clean up
+            await interaction.deleteReply();
         }
     }
 });

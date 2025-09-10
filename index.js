@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ChannelType } = require("discord.js");
 const http = require("http");
 
+// Keep-alive server
 const server = http.createServer((req, res) => {
     res.writeHead(200);
     res.end("Bot is running!");
@@ -22,6 +23,7 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.isChatInputCommand()) {
         const { commandName } = interaction;
 
+        // --- Command Handlers ---
         if (commandName === "msgserver") {
             const channel = interaction.options.getChannel("channel");
             const message = interaction.options.getString("msg");
@@ -47,79 +49,41 @@ client.on("interactionCreate", async (interaction) => {
             const role = interaction.options.getRole("role");
 
             if (!interaction.guild.members.me.permissions.has("MANAGE_ROLES")) {
-                return await interaction.reply({
-                    content: "I do not have permission to manage roles.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "I do not have permission to manage roles.", ephemeral: true });
             }
 
-            if (
-                member.roles.highest.position >=
-                interaction.guild.members.me.roles.highest.position
-            ) {
-                return await interaction.reply({
-                    content:
-                        "I cannot manage roles for this user as their highest role is equal to or higher than mine.",
-                    ephemeral: true,
-                });
+            if (member.roles.highest.position >= interaction.guild.members.me.roles.highest.position) {
+                return await interaction.reply({ content: "I cannot manage roles for this user as their highest role is equal to or higher than mine.", ephemeral: true });
             }
 
-            if (
-                role.position >= interaction.guild.members.me.roles.highest.position
-            ) {
-                return await interaction.reply({
-                    content:
-                        "I cannot give this role as it is equal to or higher than my highest role.",
-                    ephemeral: true,
-                });
+            if (role.position >= interaction.guild.members.me.roles.highest.position) {
+                return await interaction.reply({ content: "I cannot give this role as it is equal to or higher than my highest role.", ephemeral: true });
             }
 
-            await interaction.reply({
-                content: `Promoting ${member.user.tag}...`,
-                ephemeral: true,
-            });
+            await interaction.reply({ content: `Promoting ${member.user.tag}...`, ephemeral: true });
 
             try {
-                const rolesToRemove = member.roles.cache.filter(
-                    (r) => r.id !== interaction.guild.id,
-                );
+                const rolesToRemove = member.roles.cache.filter(r => r.id !== interaction.guild.id);
                 await member.roles.remove(rolesToRemove);
                 await member.roles.add(role);
-
-                await interaction.editReply({
-                    content: `✅ Successfully promoted ${member.user.tag} to **${role.name}**!`,
-                });
+                await interaction.editReply({ content: `✅ Successfully promoted ${member.user.tag} to **${role.name}**!` });
             } catch (error) {
                 console.error("Failed to promote user:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to promote user: ${error.message}`,
-                });
+                await interaction.editReply({ content: `❌ Failed to promote user: ${error.message}` });
             }
         } else if (commandName === "createrole") {
             const roleName = interaction.options.getString("name");
             const roleToCopy = interaction.options.getRole("copy_from");
 
             if (!interaction.guild.members.me.permissions.has("MANAGE_ROLES")) {
-                return await interaction.reply({
-                    content: "I do not have permission to manage roles.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "I do not have permission to manage roles.", ephemeral: true });
             }
 
-            if (
-                roleToCopy.position >=
-                interaction.guild.members.me.roles.highest.position
-            ) {
-                return await interaction.reply({
-                    content: `I cannot create a role from **${roleToCopy.name}** because its position is equal to or higher than my highest role.`,
-                    ephemeral: true,
-                });
+            if (roleToCopy.position >= interaction.guild.members.me.roles.highest.position) {
+                return await interaction.reply({ content: `I cannot create a role from **${roleToCopy.name}** because its position is equal to or higher than my highest role.`, ephemeral: true });
             }
 
-            await interaction.reply({
-                content: `Creating role **${roleName}**...`,
-                ephemeral: true,
-            });
+            await interaction.reply({ content: `Creating role **${roleName}**...`, ephemeral: true });
 
             try {
                 await interaction.guild.roles.create({
@@ -129,138 +93,81 @@ client.on("interactionCreate", async (interaction) => {
                     permissions: roleToCopy.permissions,
                     mentionable: roleToCopy.mentionable,
                 });
-
-                await interaction.editReply({
-                    content: `✅ Successfully created a new role named **${roleName}** with the same settings as **${roleToCopy.name}**!`,
-                });
+                await interaction.editReply({ content: `✅ Successfully created a new role named **${roleName}** with the same settings as **${roleToCopy.name}**!` });
             } catch (error) {
                 console.error("Failed to create role:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to create role: ${error.message}`,
-                });
+                await interaction.editReply({ content: `❌ Failed to create role: ${error.message}` });
             }
         } else if (commandName === "addrole") {
             const member = interaction.options.getMember("user");
             const role = interaction.options.getRole("role");
 
             if (!interaction.guild.members.me.permissions.has("MANAGE_ROLES")) {
-                return await interaction.reply({
-                    content: "I do not have permission to manage roles.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "I do not have permission to manage roles.", ephemeral: true });
             }
 
-            if (
-                role.position >= interaction.guild.members.me.roles.highest.position
-            ) {
-                return await interaction.reply({
-                    content:
-                        "I cannot add this role as it is equal to or higher than my highest role.",
-                    ephemeral: true,
-                });
+            if (role.position >= interaction.guild.members.me.roles.highest.position) {
+                return await interaction.reply({ content: "I cannot add this role as it is equal to or higher than my highest role.", ephemeral: true });
             }
 
-            await interaction.reply({
-                content: `Adding role to ${member.user.tag}...`,
-                ephemeral: true,
-            });
+            await interaction.reply({ content: `Adding role to ${member.user.tag}...`, ephemeral: true });
 
             try {
                 await member.roles.add(role);
-                await interaction.editReply({
-                    content: `✅ Successfully added the **${role.name}** role to ${member.user.tag}!`,
-                });
+                await interaction.editReply({ content: `✅ Successfully added the **${role.name}** role to ${member.user.tag}!` });
             } catch (error) {
                 console.error("Failed to add role:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to add role: ${error.message}`,
-                });
+                await interaction.editReply({ content: `❌ Failed to add role: ${error.message}` });
             }
         } else if (commandName === "removerole") {
             const member = interaction.options.getMember("user");
             const role = interaction.options.getRole("role");
 
             if (!interaction.guild.members.me.permissions.has("MANAGE_ROLES")) {
-                return await interaction.reply({
-                    content: "I do not have permission to manage roles.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "I do not have permission to manage roles.", ephemeral: true });
             }
 
-            if (
-                role.position >= interaction.guild.members.me.roles.highest.position
-            ) {
-                return await interaction.reply({
-                    content:
-                        "I cannot remove this role as it is equal to or higher than my highest role.",
-                    ephemeral: true,
-                });
+            if (role.position >= interaction.guild.members.me.roles.highest.position) {
+                return await interaction.reply({ content: "I cannot remove this role as it is equal to or higher than my highest role.", ephemeral: true });
             }
 
-            await interaction.reply({
-                content: `Removing role from ${member.user.tag}...`,
-                ephemeral: true,
-            });
+            await interaction.reply({ content: `Removing role from ${member.user.tag}...`, ephemeral: true });
 
             try {
                 await member.roles.remove(role);
-                await interaction.editReply({
-                    content: `✅ Successfully removed the **${role.name}** role from ${member.user.tag}!`,
-                });
+                await interaction.editReply({ content: `✅ Successfully removed the **${role.name}** role from ${member.user.tag}!` });
             } catch (error) {
                 console.error("Failed to remove role:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to remove role: ${error.message}`,
-                });
+                await interaction.editReply({ content: `❌ Failed to remove role: ${error.message}` });
             }
         } else if (commandName === "deleterole") {
             const roleToDelete = interaction.options.getRole("role");
 
             if (!interaction.guild.members.me.permissions.has("MANAGE_ROLES")) {
-                return await interaction.reply({
-                    content: "I do not have permission to manage roles.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "I do not have permission to manage roles.", ephemeral: true });
             }
 
-            if (
-                roleToDelete.position >=
-                interaction.guild.members.me.roles.highest.position
-            ) {
-                return await interaction.reply({
-                    content: `I cannot delete this role because its position is equal to or higher than my highest role.`,
-                    ephemeral: true,
-                });
+            if (roleToDelete.position >= interaction.guild.members.me.roles.highest.position) {
+                return await interaction.reply({ content: `I cannot delete this role because its position is equal to or higher than my highest role.`, ephemeral: true });
             }
 
-            await interaction.reply({
-                content: `Deleting role **${roleToDelete.name}**...`,
-                ephemeral: true,
-            });
+            await interaction.reply({ content: `Deleting role **${roleToDelete.name}**...`, ephemeral: true });
 
             try {
                 await roleToDelete.delete();
-                await interaction.editReply({
-                    content: `✅ Successfully deleted the role **${roleToDelete.name}**!`,
-                });
+                await interaction.editReply({ content: `✅ Successfully deleted the role **${roleToDelete.name}**!` });
             } catch (error) {
                 console.error("Failed to delete role:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to delete role: ${error.message}`,
-                });
+                await interaction.editReply({ content: `❌ Failed to delete role: ${error.message}` });
             }
         } else if (commandName === "ping") {
-            await interaction.reply({
-                content: `🏓 Pong! Latency is ${Date.now() - interaction.createdTimestamp}ms. API Latency is ${Math.round(client.ws.ping)}ms.`,
-                ephemeral: true,
-            });
+            await interaction.reply({ content: `🏓 Pong! Latency is ${Date.now() - interaction.createdTimestamp}ms. API Latency is ${Math.round(client.ws.ping)}ms.`, ephemeral: true });
         } else if (commandName === "avatar") {
             const user = interaction.options.getUser("user") || interaction.user;
             const avatarEmbed = new EmbedBuilder()
                 .setColor(0x0099ff)
                 .setTitle(`${user.username}'s Avatar`)
                 .setImage(user.displayAvatarURL({ dynamic: true, size: 4096 }));
-
             await interaction.reply({ embeds: [avatarEmbed] });
         } else if (commandName === "help") {
             const helpEmbed = new EmbedBuilder()
@@ -268,189 +175,85 @@ client.on("interactionCreate", async (interaction) => {
                 .setTitle("Bot Commands")
                 .setDescription("Here is a list of all available commands:")
                 .addFields(
-                    {
-                        name: "/msgserver",
-                        value: "Sends a message to a channel.",
-                        inline: true,
-                    },
-                    {
-                        name: "/promote",
-                        value: "Removes old roles and adds a new one to a user.",
-                        inline: true,
-                    },
-                    {
-                        name: "/createrole",
-                        value: "Creates a new role.",
-                        inline: true,
-                    },
-                    {
-                        name: "/addrole",
-                        value: "Adds a role to a user.",
-                        inline: true,
-                    },
-                    {
-                        name: "/removerole",
-                        value: "Removes a role from a user.",
-                        inline: true,
-                    },
+                    { name: "/msgserver", value: "Sends a message to a channel.", inline: true },
+                    { name: "/promote", value: "Removes old roles and adds a new one to a user.", inline: true },
+                    { name: "/createrole", value: "Creates a new role.", inline: true },
+                    { name: "/addrole", value: "Adds a role to a user.", inline: true },
+                    { name: "/removerole", value: "Removes a role from a user.", inline: true },
                     { name: "/deleterole", value: "Deletes a role.", inline: true },
-                    {
-                        name: "/ping",
-                        value: "Checks the bot's latency.",
-                        inline: true,
-                    },
-                    {
-                        name: "/avatar",
-                        value: "Displays a user's avatar.",
-                        inline: true,
-                    },
-                    {
-                        name: "/ban",
-                        value: "Bans a user from the server.",
-                        inline: true,
-                    },
-                    {
-                        name: "/kick",
-                        value: "Kicks a user from the server.",
-                        inline: true,
-                    },
+                    { name: "/ping", value: "Checks the bot's latency.", inline: true },
+                    { name: "/avatar", value: "Displays a user's avatar.", inline: true },
+                    { name: "/ban", value: "Bans a user from the server.", inline: true },
+                    { name: "/kick", value: "Kicks a user from the server.", inline: true },
                     { name: "/warn", value: "Warns a user.", inline: true },
-                    {
-                        name: "/purge",
-                        value: "Deletes a number of messages.",
-                        inline: true,
-                    },
-                    {
-                        name: "/embed",
-                        value: "Sends a custom embed message.",
-                        inline: true,
-                    },
-                    {
-                        name: "/tryouts",
-                        value: "Starts the tryout process.",
-                        inline: true,
-                    },
-                    {
-                        name: "/createchannel",
-                        value: "Creates a new channel.",
-                        inline: true,
-                    },
-                    {
-                        name: "/createcategory",
-                        value: "Creates a new category.",
-                        inline: true,
-                    },
-                    {
-                        name: "/help",
-                        value: "Lists all available commands.",
-                        inline: true,
-                    },
+                    { name: "/purge", value: "Deletes a number of messages.", inline: true },
+                    { name: "/embed", value: "Sends a custom embed message.", inline: true },
+                    { name: "/tryouts", value: "Starts the tryout process.", inline: true }, // Updated description
+                    { name: "/createchannel", value: "Creates a new channel.", inline: true },
+                    { name: "/createcategory", value: "Creates a new category.", inline: true },
+                    { name: "/help", value: "Lists all available commands.", inline: true },
                 );
-
             await interaction.reply({ embeds: [helpEmbed], ephemeral: true });
         } else if (commandName === "ban") {
             const user = interaction.options.getUser("user");
             const member = interaction.guild.members.cache.get(user.id);
-            const reason =
-                interaction.options.getString("reason") || "No reason provided";
+            const reason = interaction.options.getString("reason") || "No reason provided";
 
             if (!interaction.member.permissions.has("BAN_MEMBERS")) {
-                return await interaction.reply({
-                    content: "You do not have permission to use this command.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
             }
 
             if (member) {
                 if (member.permissions.has("ADMINISTRATOR")) {
-                    return await interaction.reply({
-                        content: "I cannot ban an administrator.",
-                        ephemeral: true,
-                    });
+                    return await interaction.reply({ content: "I cannot ban an administrator.", ephemeral: true });
                 }
-
                 if (!interaction.guild.members.me.permissions.has("BAN_MEMBERS")) {
-                    return await interaction.reply({
-                        content: "I do not have permission to ban members.",
-                        ephemeral: true,
-                    });
+                    return await interaction.reply({ content: "I do not have permission to ban members.", ephemeral: true });
                 }
 
                 try {
                     await member.ban({ reason });
-                    await interaction.reply({
-                        content: `✅ Successfully banned **${user.tag}** for reason: ${reason}`,
-                        ephemeral: true,
-                    });
+                    await interaction.reply({ content: `✅ Successfully banned **${user.tag}** for reason: ${reason}`, ephemeral: true });
                 } catch (error) {
                     console.error(error);
-                    await interaction.reply({
-                        content: `❌ Failed to ban **${user.tag}**.`,
-                        ephemeral: true,
-                    });
+                    await interaction.reply({ content: `❌ Failed to ban **${user.tag}**.`, ephemeral: true });
                 }
             } else {
-                await interaction.reply({
-                    content: "User not found.",
-                    ephemeral: true,
-                });
+                await interaction.reply({ content: "User not found.", ephemeral: true });
             }
         } else if (commandName === "kick") {
             const user = interaction.options.getUser("user");
             const member = interaction.guild.members.cache.get(user.id);
-            const reason =
-                interaction.options.getString("reason") || "No reason provided";
+            const reason = interaction.options.getString("reason") || "No reason provided";
 
             if (!interaction.member.permissions.has("KICK_MEMBERS")) {
-                return await interaction.reply({
-                    content: "You do not have permission to use this command.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
             }
 
             if (member) {
                 if (member.permissions.has("ADMINISTRATOR")) {
-                    return await interaction.reply({
-                        content: "I cannot kick an administrator.",
-                        ephemeral: true,
-                    });
+                    return await interaction.reply({ content: "I cannot kick an administrator.", ephemeral: true });
                 }
-
                 if (!interaction.guild.members.me.permissions.has("KICK_MEMBERS")) {
-                    return await interaction.reply({
-                        content: "I do not have permission to kick members.",
-                        ephemeral: true,
-                    });
+                    return await interaction.reply({ content: "I do not have permission to kick members.", ephemeral: true });
                 }
 
                 try {
                     await member.kick({ reason });
-                    await interaction.reply({
-                        content: `✅ Successfully kicked **${user.tag}** for reason: ${reason}`,
-                        ephemeral: true,
-                    });
+                    await interaction.reply({ content: `✅ Successfully kicked **${user.tag}** for reason: ${reason}`, ephemeral: true });
                 } catch (error) {
                     console.error(error);
-                    await interaction.reply({
-                        content: `❌ Failed to kick **${user.tag}**.`,
-                        ephemeral: true,
-                    });
+                    await interaction.reply({ content: `❌ Failed to kick **${user.tag}**.`, ephemeral: true });
                 }
             } else {
-                await interaction.reply({
-                    content: "User not found.",
-                    ephemeral: true,
-                });
+                await interaction.reply({ content: "User not found.", ephemeral: true });
             }
         } else if (commandName === "warn") {
             const user = interaction.options.getUser("user");
             const reason = interaction.options.getString("reason");
 
             if (!interaction.member.permissions.has("KICK_MEMBERS")) {
-                return await interaction.reply({
-                    content: "You do not have permission to warn users.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "You do not have permission to warn users.", ephemeral: true });
             }
 
             const warnEmbed = new EmbedBuilder()
@@ -458,68 +261,38 @@ client.on("interactionCreate", async (interaction) => {
                 .setTitle(`Warning Issued`)
                 .addFields(
                     { name: "User", value: user.tag, inline: true },
-                    {
-                        name: "Moderator",
-                        value: interaction.user.tag,
-                        inline: true,
-                    },
+                    { name: "Moderator", value: interaction.user.tag, inline: true },
                     { name: "Reason", value: reason, inline: false },
                 )
                 .setTimestamp();
 
             try {
-                await user.send({
-                    content: `You have been warned in the server **${interaction.guild.name}**.`,
-                    embeds: [warnEmbed],
-                });
-                await interaction.reply({
-                    content: `✅ Successfully warned **${user.tag}**.`,
-                    ephemeral: true,
-                });
+                await user.send({ content: `You have been warned in the server **${interaction.guild.name}**.`, embeds: [warnEmbed] });
+                await interaction.reply({ content: `✅ Successfully warned **${user.tag}**.`, ephemeral: true });
             } catch (error) {
                 console.error("Failed to send DM to user:", error);
-                await interaction.reply({
-                    content: `❌ Failed to warn user. Could not send a DM.`,
-                    ephemeral: true,
-                });
+                await interaction.reply({ content: `❌ Failed to warn user. Could not send a DM.`, ephemeral: true });
             }
         } else if (commandName === "purge") {
             const amount = interaction.options.getInteger("amount");
 
             if (!interaction.member.permissions.has("MANAGE_MESSAGES")) {
-                return await interaction.reply({
-                    content: "You do not have permission to manage messages.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "You do not have permission to manage messages.", ephemeral: true });
             }
 
             if (amount <= 0 || amount > 100) {
-                return await interaction.reply({
-                    content: "You can only purge between 1 and 100 messages.",
-                    ephemeral: true,
-                });
+                return await interaction.reply({ content: "You can only purge between 1 and 100 messages.", ephemeral: true });
             }
 
-            await interaction.reply({
-                content: `Purging ${amount} messages...`,
-                ephemeral: true,
-            });
+            await interaction.reply({ content: `Purging ${amount} messages...`, ephemeral: true });
 
             try {
-                const fetchedMessages = await interaction.channel.messages.fetch({
-                    limit: amount,
-                });
+                const fetchedMessages = await interaction.channel.messages.fetch({ limit: amount });
                 await interaction.channel.bulkDelete(fetchedMessages, true);
-
-                await interaction.editReply({
-                    content: `✅ Successfully purged **${amount}** messages.`,
-                    ephemeral: true,
-                });
+                await interaction.editReply({ content: `✅ Successfully purged **${amount}** messages.`, ephemeral: true });
             } catch (error) {
                 console.error("Failed to purge messages:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to purge messages: ${error.message}`,
-                });
+                await interaction.editReply({ content: `❌ Failed to purge messages: ${error.message}` });
             }
         } else if (commandName === "embed") {
             const channel = interaction.options.getChannel("channel");
@@ -535,17 +308,8 @@ client.on("interactionCreate", async (interaction) => {
             const footerIconUrl = interaction.options.getString("footer_icon_url");
             const timestamp = interaction.options.getBoolean("timestamp");
 
-            // Check if the bot has permission to send messages and embeds in the target channel
-            if (
-                !channel
-                    .permissionsFor(interaction.guild.members.me)
-                    .has(["SendMessages", "EmbedLinks"])
-            ) {
-                return await interaction.reply({
-                    content:
-                        "I do not have permission to send messages and embeds in that channel.",
-                    ephemeral: true,
-                });
+            if (!channel.permissionsFor(interaction.guild.members.me).has(["SendMessages", "EmbedLinks"])) {
+                return await interaction.reply({ content: "I do not have permission to send messages and embeds in that channel.", ephemeral: true });
             }
 
             const embed = new EmbedBuilder()
@@ -554,11 +318,7 @@ client.on("interactionCreate", async (interaction) => {
                 .setColor(color.startsWith("#") ? color : `#${color}`);
 
             if (authorName) {
-                embed.setAuthor({
-                    name: authorName,
-                    url: authorUrl || null,
-                    iconURL: authorIconUrl || null,
-                });
+                embed.setAuthor({ name: authorName, url: authorUrl || null, iconURL: authorIconUrl || null });
             }
             if (thumbnailUrl) {
                 embed.setThumbnail(thumbnailUrl);
@@ -567,10 +327,7 @@ client.on("interactionCreate", async (interaction) => {
                 embed.setImage(imageUrl);
             }
             if (footerText) {
-                embed.setFooter({
-                    text: footerText,
-                    iconURL: footerIconUrl || null,
-                });
+                embed.setFooter({ text: footerText, iconURL: footerIconUrl || null });
             }
             if (timestamp) {
                 embed.setTimestamp();
@@ -578,149 +335,19 @@ client.on("interactionCreate", async (interaction) => {
 
             try {
                 await channel.send({ embeds: [embed] });
-                await interaction.reply({
-                    content: `✅ Successfully sent the embed to ${channel.name}!`,
-                    ephemeral: true,
-                });
+                await interaction.reply({ content: `✅ Successfully sent the embed to ${channel.name}!`, ephemeral: true });
             } catch (error) {
                 console.error("Failed to send embed:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to send embed: ${error.message}`,
-                });
+                await interaction.editReply({ content: `❌ Failed to send embed: ${error.message}` });
             }
         } else if (commandName === "tryouts") {
-            const user = interaction.options.getUser("user");
+            // Changed: No longer takes a user option
             const tryoutsEmbed = new EmbedBuilder()
                 .setColor(0x0099ff)
-                .setTitle("Tryouts Open!")
+                .setTitle("Tryouts Process")
                 .setDescription(
-                    `Tryouts are now open for ${user}! Anyone interested in trying out can click the button below.`,
+                    "First, we have to do DL (Default Loadout Duel),\n" +
+                    "then CL (Custom Loadout Duel),\n" +
+                    "and finally Sniper Only Duel."
                 )
-                .setThumbnail(user.displayAvatarURL({ dynamic: true, size: 4096 }));
-
-            const button = new ButtonBuilder()
-                .setCustomId("agree_to_tryout")
-                .setLabel("I agree to tryout")
-                .setStyle(ButtonStyle.Success);
-
-            const row = new ActionRowBuilder().addComponents(button);
-
-            await interaction.reply({
-                content: `${user}`,
-                embeds: [tryoutsEmbed],
-                components: [row],
-            });
-        } else if (commandName === "createchannel") {
-            const channelName = interaction.options.getString("name");
-            const channelToCopy = interaction.options.getChannel("copy_from");
-
-            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS")) {
-                return await interaction.reply({
-                    content: "I do not have permission to manage channels.",
-                    ephemeral: true,
-                });
-            }
-
-            await interaction.reply({
-                content: `Creating channel **${channelName}**...`,
-                ephemeral: true,
-            });
-
-            try {
-                if (channelToCopy) {
-                    await interaction.guild.channels.create({
-                        name: channelName,
-                        type: channelToCopy.type,
-                        topic: channelToCopy.topic,
-                        parent: channelToCopy.parentId,
-                        permissionOverwrites: channelToCopy.permissionOverwrites.cache,
-                    });
-                } else {
-                    await interaction.guild.channels.create({
-                        name: channelName,
-                        type: ChannelType.GuildText,
-                    });
-                }
-
-                await interaction.editReply({
-                    content: `✅ Successfully created a new channel named **${channelName}**!`,
-                });
-            } catch (error) {
-                console.error("Failed to create channel:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to create channel: ${error.message}`,
-                });
-            }
-        } else if (commandName === "createcategory") {
-            const categoryName = interaction.options.getString("name");
-            const categoryToCopy = interaction.options.getChannel("copy_from");
-
-            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS")) {
-                return await interaction.reply({
-                    content: "I do not have permission to manage channels.",
-                    ephemeral: true,
-                });
-            }
-
-            await interaction.reply({
-                content: `Creating category **${categoryName}**...`,
-                ephemeral: true,
-            });
-
-            try {
-                const options = {
-                    name: categoryName,
-                    type: ChannelType.GuildCategory,
-                };
-
-                if (categoryToCopy) {
-                    options.permissionOverwrites = categoryToCopy.permissionOverwrites.cache;
-                }
-
-                await interaction.guild.channels.create(options);
-
-                await interaction.editReply({
-                    content: `✅ Successfully created a new category named **${categoryName}**!`,
-                });
-            } catch (error) {
-                console.error("Failed to create category:", error);
-                await interaction.editReply({
-                    content: `❌ Failed to create category: ${error.message}`,
-                });
-            }
-        }
-    } else if (interaction.isButton()) {
-        // This is where we handle button clicks
-        if (interaction.customId === "agree_to_tryout") {
-            // Check if the interaction is already acknowledged (e.g., by a previous reply)
-            // If not, reply. If yes, send a follow-up.
-            try {
-                await interaction.channel.send(
-                    `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
-                );
-                // Reply ephemerally to acknowledge the button click
-                await interaction.reply({
-                    content: "Your agreement has been noted.",
-                    ephemeral: true,
-                });
-            } catch (error) {
-                // If interaction.reply fails (likely because it was already replied to), use followUp
-                console.error("Error replying to button interaction:", error);
-                try {
-                    await interaction.followUp({
-                        content: `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
-                        ephemeral: false, // Make this visible to everyone
-                    });
-                } catch (followUpError) {
-                    console.error("Error following up to button interaction:", followUpError);
-                }
-            }
-        }
-    }
-});
-
-server.listen(3000, () => {
-    console.log("Web server is running on port 3000");
-});
-
-client.login(process.env.DISCORD_BOT_TOKEN);
+                .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 4096 }));

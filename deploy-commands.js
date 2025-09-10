@@ -236,8 +236,14 @@ const commands = [
                 .setRequired(false),
         ),
     new SlashCommandBuilder()
-        .setName("tryout")
-        .setDescription("Posts an embed with the tryouts process."),
+        .setName("tryouts")
+        .setDescription("Starts the tryout process for a user.")
+        .addUserOption((option) =>
+            option
+                .setName("user")
+                .setDescription("The user who is trying out.")
+                .setRequired(true),
+        ),
     new SlashCommandBuilder()
         .setName("createchannel")
         .setDescription(

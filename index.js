@@ -350,4 +350,92 @@ client.on("interactionCreate", async (interaction) => {
                     "then CL (Custom Loadout Duel),\n" +
                     "and finally Sniper Only Duel."
                 )
-                .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 4096 }));
+                .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 4096 })); // Using server icon as thumbnail
+
+            const button = new ButtonBuilder()
+                .setCustomId("agree_to_tryout") // This ID is used to identify which button was clicked
+                .setLabel("I agree to tryout")
+                .setStyle(ButtonStyle.Success);
+
+            const row = new ActionRowBuilder().addComponents(button);
+
+            // Reply without mentioning the user at the top of the message
+            await interaction.reply({
+                embeds: [tryoutsEmbed],
+                components: [row],
+            });
+        } else if (commandName === "createchannel") {
+            const channelName = interaction.options.getString("name");
+            const channelToCopy = interaction.options.getChannel("copy_from");
+
+            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS")) {
+                return await interaction.reply({ content: "I do not have permission to manage channels.", ephemeral: true });
+            }
+
+            await interaction.reply({ content: `Creating channel **${channelName}**...`, ephemeral: true });
+
+            try {
+                const options = {
+                    name: channelName,
+                    type: channelToCopy ? channelToCopy.type : ChannelType.GuildText, // Default to text channel if no copy_from
+                };
+                if (channelToCopy) {
+                    options.topic = channelToCopy.topic;
+                    options.parent = channelToCopy.parentId;
+                    options.permissionOverwrites = channelToCopy.permissionOverwrites.cache;
+                }
+
+                await interaction.guild.channels.create(options);
+                await interaction.editReply({ content: `✅ Successfully created a new channel named **${channelName}**!` });
+            } catch (error) {
+                console.error("Failed to create channel:", error);
+                await interaction.editReply({ content: `❌ Failed to create channel: ${error.message}` });
+            }
+        } else if (commandName === "createcategory") {
+            const categoryName = interaction.options.getString("name");
+            const categoryToCopy = interaction.options.getChannel("copy_from");
+
+            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS")) {
+                return await interaction.reply({ content: "I do not have permission to manage channels.", ephemeral: true });
+            }
+
+            await interaction.reply({ content: `Creating category **${categoryName}**...`, ephemeral: true });
+
+            try {
+                const options = {
+                    name: categoryName,
+                    type: ChannelType.GuildCategory,
+                };
+
+                if (categoryToCopy) {
+                    options.permissionOverwrites = categoryToCopy.permissionOverwrites.cache;
+                }
+
+                await interaction.guild.channels.create(options);
+                await interaction.editReply({ content: `✅ Successfully created a new category named **${categoryName}**!` });
+            } catch (error) {
+                console.error("Failed to create category:", error);
+                await interaction.editReply({ content: `❌ Failed to create category: ${error.message}` });
+            }
+        }
+    } else if (interaction.isButton()) {
+        if (interaction.customId === "agree_to_tryout") {
+            // Mention the user who clicked the button in the channel message
+            await interaction.channel.send(
+                `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
+            );
+
+            // Reply ephemerally to the button click itself
+            await interaction.reply({
+                content: "Your agreement has been noted.",
+                ephemeral: true,
+            });
+        }
+    }
+});
+
+server.listen(3000, () => {
+    console.log("Web server is running on port 3000");
+});
+
+client.login(process.env.DISCORD_BOT_TOKEN);

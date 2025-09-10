@@ -236,14 +236,8 @@ const commands = [
                 .setRequired(false),
         ),
     new SlashCommandBuilder()
-        .setName("tryouts")
-        .setDescription("Starts the tryout process for a user.")
-        .addUserOption((option) =>
-            option
-                .setName("user")
-                .setDescription("The user who is trying out.")
-                .setRequired(true),
-        ),
+        .setName("tryouts") // Changed: removed addUserOption
+        .setDescription("Starts the tryout process."),
     new SlashCommandBuilder()
         .setName("createchannel")
         .setDescription(

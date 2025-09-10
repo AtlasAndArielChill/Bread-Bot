@@ -419,13 +419,26 @@ client.on("interactionCreate", async (interaction) => {
         }
     } else if (interaction.isButton()) {
         if (interaction.customId === "agree_to_tryout") {
+            // Acknowledge the interaction immediately to prevent "Interaction has failed" error
             await interaction.deferReply({ ephemeral: true });
 
+            // Send the message to the channel
             await interaction.channel.send(
                 `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
             );
 
+            // Delete the ephemeral acknowledgment after sending the channel message
             await interaction.deleteReply();
+
+            // Schedule deletion of the original embed message after 2 seconds
+            setTimeout(async () => {
+                try {
+                    // interaction.message refers to the message containing the button
+                    await interaction.message.delete();
+                } catch (error) {
+                    console.error("Failed to delete tryouts embed:", error);
+                }
+            }, 2000); // 2000 milliseconds = 2 seconds
         }
     }
 });

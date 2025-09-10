@@ -155,7 +155,7 @@ client.on("interactionCreate", async (interaction) => {
 
             try {
                 await roleToDelete.delete();
-                await interaction.editReply({ content: `✅ Successfully deleted the role **${roleToDelete.name}**!` });
+                await interaction.editReply({ content: `✅ Successfully deleted the role **${roleToDelete.name}!` });
             } catch (error) {
                 console.error("Failed to delete role:", error);
                 await interaction.editReply({ content: `❌ Failed to delete role: ${error.message}` });
@@ -188,7 +188,7 @@ client.on("interactionCreate", async (interaction) => {
                     { name: "/warn", value: "Warns a user.", inline: true },
                     { name: "/purge", value: "Deletes a number of messages.", inline: true },
                     { name: "/embed", value: "Sends a custom embed message.", inline: true },
-                    { name: "/tryouts", value: "Starts the tryout process.", inline: true }, // Updated description
+                    { name: "/tryouts", value: "Starts the tryout process.", inline: true },
                     { name: "/createchannel", value: "Creates a new channel.", inline: true },
                     { name: "/createcategory", value: "Creates a new category.", inline: true },
                     { name: "/help", value: "Lists all available commands.", inline: true },
@@ -341,7 +341,6 @@ client.on("interactionCreate", async (interaction) => {
                 await interaction.editReply({ content: `❌ Failed to send embed: ${error.message}` });
             }
         } else if (commandName === "tryouts") {
-            // Changed: No longer takes a user option
             const tryoutsEmbed = new EmbedBuilder()
                 .setColor(0x0099ff)
                 .setTitle("Tryouts Process")
@@ -350,16 +349,16 @@ client.on("interactionCreate", async (interaction) => {
                     "then CL (Custom Loadout Duel),\n" +
                     "and finally Sniper Only Duel."
                 )
-                .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 4096 })); // Using server icon as thumbnail
+                .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 4096 }))
+                .setImage("https://cdn.discordapp.com/attachments/1327154745076613153/1415369159990317236/Tryouts_Process_1.png?ex=68c2f4c0&is=68c1a340&hm=197ce199aba26fcfc1419b5fb85e95c13356c817723c454ad890528a7364f20b&"); // Added image here
 
             const button = new ButtonBuilder()
-                .setCustomId("agree_to_tryout") // This ID is used to identify which button was clicked
+                .setCustomId("agree_to_tryout")
                 .setLabel("I agree to tryout")
                 .setStyle(ButtonStyle.Success);
 
             const row = new ActionRowBuilder().addComponents(button);
 
-            // Reply without mentioning the user at the top of the message
             await interaction.reply({
                 embeds: [tryoutsEmbed],
                 components: [row],
@@ -377,7 +376,7 @@ client.on("interactionCreate", async (interaction) => {
             try {
                 const options = {
                     name: channelName,
-                    type: channelToCopy ? channelToCopy.type : ChannelType.GuildText, // Default to text channel if no copy_from
+                    type: channelToCopy ? channelToCopy.type : ChannelType.GuildText,
                 };
                 if (channelToCopy) {
                     options.topic = channelToCopy.topic;
@@ -386,7 +385,7 @@ client.on("interactionCreate", async (interaction) => {
                 }
 
                 await interaction.guild.channels.create(options);
-                await interaction.editReply({ content: `✅ Successfully created a new channel named **${channelName}**!` });
+                await interaction.editReply({ content: `✅ Successfully created a new channel named **${channelName}!` });
             } catch (error) {
                 console.error("Failed to create channel:", error);
                 await interaction.editReply({ content: `❌ Failed to create channel: ${error.message}` });
@@ -412,7 +411,7 @@ client.on("interactionCreate", async (interaction) => {
                 }
 
                 await interaction.guild.channels.create(options);
-                await interaction.editReply({ content: `✅ Successfully created a new category named **${categoryName}**!` });
+                await interaction.editReply({ content: `✅ Successfully created a new category named **${categoryName}!` });
             } catch (error) {
                 console.error("Failed to create category:", error);
                 await interaction.editReply({ content: `❌ Failed to create category: ${error.message}` });
@@ -420,12 +419,10 @@ client.on("interactionCreate", async (interaction) => {
         }
     } else if (interaction.isButton()) {
         if (interaction.customId === "agree_to_tryout") {
-            // Mention the user who clicked the button in the channel message
             await interaction.channel.send(
                 `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
             );
 
-            // Reply ephemerally to the button click itself
             await interaction.reply({
                 content: "Your agreement has been noted.",
                 ephemeral: true,

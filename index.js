@@ -690,15 +690,31 @@ client.on("interactionCreate", async (interaction) => {
             }
         }
     } else if (interaction.isButton()) {
+        // This is where we handle button clicks
         if (interaction.customId === "agree_to_tryout") {
-            await interaction.channel.send(
-                `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
-            );
-
-            await interaction.reply({
-                content: "Your agreement has been noted.",
-                ephemeral: true,
-            });
+            // Check if the interaction is already acknowledged (e.g., by a previous reply)
+            // If not, reply. If yes, send a follow-up.
+            try {
+                await interaction.channel.send(
+                    `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
+                );
+                // Reply ephemerally to acknowledge the button click
+                await interaction.reply({
+                    content: "Your agreement has been noted.",
+                    ephemeral: true,
+                });
+            } catch (error) {
+                // If interaction.reply fails (likely because it was already replied to), use followUp
+                console.error("Error replying to button interaction:", error);
+                try {
+                    await interaction.followUp({
+                        content: `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
+                        ephemeral: false, // Make this visible to everyone
+                    });
+                } catch (followUpError) {
+                    console.error("Error following up to button interaction:", followUpError);
+                }
+            }
         }
     }
 });

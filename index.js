@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ChannelType } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle } = require("discord.js");
 const http = require("http");
 
 // Keep-alive server
@@ -6,6 +6,9 @@ const server = http.createServer((req, res) => {
     res.writeHead(200);
     res.end("Bot is running!");
 });
+
+// IMPORTANT: Replace this with the ID of the private channel where you want to receive suggestions.
+const SUGGESTIONS_CHANNEL_ID = "YOUR_PRIVATE_CHANNEL_ID_HERE";
 
 const client = new Client({
     intents: [
@@ -191,6 +194,7 @@ client.on("interactionCreate", async (interaction) => {
                     { name: "/tryouts", value: "Starts the tryout process.", inline: true },
                     { name: "/createchannel", value: "Creates a new channel.", inline: true },
                     { name: "/createcategory", value: "Creates a new category.", inline: true },
+                    { name: "/suggestion", value: "Submits a suggestion.", inline: true },
                     { name: "/help", value: "Lists all available commands.", inline: true },
                 );
             await interaction.reply({ embeds: [helpEmbed], ephemeral: true });
@@ -359,14 +363,12 @@ client.on("interactionCreate", async (interaction) => {
 
             const row = new ActionRowBuilder().addComponents(button);
 
-            // Store the embed message object in a variable for later use.
             const sentEmbed = await interaction.reply({
                 embeds: [tryoutsEmbed],
                 components: [row],
-                fetchReply: true // This is crucial!
+                fetchReply: true
             });
             
-            // Wait 2 seconds and then delete the embed
             setTimeout(async () => {
                 await sentEmbed.delete();
             }, 2000);
@@ -423,36 +425,61 @@ client.on("interactionCreate", async (interaction) => {
                 console.error("Failed to create category:", error);
                 await interaction.editReply({ content: `❌ Failed to create category: ${error.message}` });
             }
+        } else if (commandName === "suggestion") {
+            const modal = new ModalBuilder()
+                .setCustomId("suggestionModal")
+                .setTitle("Submit a Suggestion");
+
+            const suggestionInput = new TextInputBuilder()
+                .setCustomId("suggestionInput")
+                .setLabel("Your Suggestion")
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMinLength(10)
+                .setMaxLength(2000);
+
+            const firstActionRow = new ActionRowBuilder().addComponents(suggestionInput);
+
+            modal.addComponents(firstActionRow);
+
+            await interaction.showModal(modal);
         }
     } else if (interaction.isButton()) {
         if (interaction.customId === "agree_to_tryout") {
-            // Acknowledge the interaction first to prevent the "Interaction failed" message.
             await interaction.deferReply({ ephemeral: true });
 
-            // Send the message to the channel
             await interaction.channel.send(
                 `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
             );
 
-            // Delete the original embed after 2 seconds.
-            setTimeout(async () => {
-                try {
-                    // You need to find the original message to delete it.
-                    // Discord.js v14 doesn't have a direct way to do this from the button interaction.
-                    // The best way is to fetch the original message from the channel.
-                    // We'll assume the original message is the most recent one in the channel.
-                    const messages = await interaction.channel.messages.fetch({ limit: 10 });
-                    const originalEmbed = messages.find(m => m.interaction?.commandName === 'tryouts' && m.id === interaction.message.id);
-                    if (originalEmbed) {
-                        await originalEmbed.delete();
-                    }
-                } catch (error) {
-                    console.error("Failed to delete the original embed:", error);
-                }
-            }, 2000);
-
-            // Delete the ephemeral reply to clean up
             await interaction.deleteReply();
+        }
+    } else if (interaction.isModalSubmit()) {
+        if (interaction.customId === "suggestionModal") {
+            await interaction.deferReply({ ephemeral: true });
+
+            const suggestion = interaction.fields.getTextInputValue("suggestionInput");
+            const ownerChannel = client.channels.cache.get(SUGGESTIONS_CHANNEL_ID);
+
+            if (ownerChannel) {
+                const suggestionEmbed = new EmbedBuilder()
+                    .setColor(0x0099ff)
+                    .setTitle("New Suggestion")
+                    .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+                    .setDescription(suggestion)
+                    .setTimestamp();
+                
+                await ownerChannel.send({ embeds: [suggestionEmbed] });
+                
+                await interaction.editReply({
+                    content: "✅ Your suggestion has been submitted successfully!",
+                });
+            } else {
+                await interaction.editReply({
+                    content: "❌ Something went wrong. The suggestions channel was not found.",
+                });
+                console.error(`Suggestions channel not found. Check the channel ID: ${SUGGESTIONS_CHANNEL_ID}`);
+            }
         }
     }
 });

@@ -274,6 +274,17 @@ const commands = [
     new SlashCommandBuilder()
         .setName("suggestion")
         .setDescription("Submits a suggestion to the server owner."),
+    // NEW COMMAND: /close
+    new SlashCommandBuilder()
+        .setName("close")
+        .setDescription("Locks a channel for 24 hours, allowing only the server owner to speak.")
+        .addChannelOption((option) =>
+            option
+                .setName("channel")
+                .setDescription("The channel to lock.")
+                .setRequired(true)
+                .addChannelTypes(ChannelType.GuildText) // Ensure it's a text channel
+        ),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);

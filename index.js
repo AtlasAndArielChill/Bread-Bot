@@ -1,21 +1,24 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle } = require("discord.js");
+const { Client, GatewayIntentBits, EmbedBuilder, ChannelType, PermissionsBitField } = require("discord.js");
 const http = require("http");
 
-// Keep-alive server
+// Web server for keep-alive
 const server = http.createServer((req, res) => {
     res.writeHead(200);
     res.end("Bot is running!");
 });
 
-// IMPORTANT: Replace this with the ID of the private channel where you want to receive suggestions.
-const SUGGESTIONS_CHANNEL_ID = "1389958338594472020";
+// --- Environment Variables ---
+// Make sure to set these in your Render environment variables or .env file
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID; // Required for deploy-commands.js, but good to have here too
+const GUILD_ID = process.env.GUILD_ID;   // Required for deploy-commands.js, but good to have here too
+const OWNER_ROLE_ID = process.env.OWNER_ROLE_ID; // The role ID for server owners/admins
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildInvites, // Needed for managing permissions
     ],
 });
 
@@ -192,10 +195,6 @@ client.on("interactionCreate", async (interaction) => {
                     { name: "/warn", value: "Warns a user.", inline: true },
                     { name: "/purge", value: "Deletes a number of messages.", inline: true },
                     { name: "/embed", value: "Sends a custom embed message.", inline: true },
-                    { name: "/tryouts", value: "Starts the tryout process.", inline: true },
-                    { name: "/createchannel", value: "Creates a new channel.", inline: true },
-                    { name: "/createcategory", value: "Creates a new category.", inline: true },
-                    { name: "/suggestion", value: "Submits a suggestion.", inline: true },
                     { name: "/close", value: "Locks a channel for 24 hours.", inline: true },
                     { name: "/help", value: "Lists all available commands.", inline: true },
                 );
@@ -344,222 +343,98 @@ client.on("interactionCreate", async (interaction) => {
                 await interaction.reply({ content: `✅ Successfully sent the embed to ${channel.name}!`, ephemeral: true });
             } catch (error) {
                 console.error("Failed to send embed:", error);
-                await interaction.editReply({ content: `❌ Failed to send embed: ${error.message}` });
+                await interaction.reply({ content: `❌ Failed to send embed: ${error.message}`, ephemeral: true });
             }
-        } else if (commandName === "tryouts") {
-            const tryoutsEmbed = new EmbedBuilder()
-                .setColor(0x0099ff)
-                .setTitle("Tryouts Process")
-                .setDescription(
-                    "First, we have to do DL (Default Loadout Duel),\n" +
-                    "then CL (Custom Loadout Duel),\n" +
-                    "and finally Sniper Only Duel."
-                )
-                .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 4096 }))
-                .setImage("https://cdn.discordapp.com/attachments/1327154745076613153/1415369159990317236/Tryouts_Process_1.png?ex=68c2f4c0&is=68c1a340&hm=197ce199aba26fcfc1419b5fb85e95c13356c817723c454ad890528a7364f20b&");
-
-            const button = new ButtonBuilder()
-                .setCustomId("agree_to_tryout")
-                .setLabel("I agree to tryout")
-                .setStyle(ButtonStyle.Success);
-
-            const row = new ActionRowBuilder().addComponents(button);
-
-            const sentEmbed = await interaction.reply({
-                embeds: [tryoutsEmbed],
-                components: [row],
-                fetchReply: true
-            });
-            
-            setTimeout(async () => {
-                await sentEmbed.delete();
-            }, 2000);
-        } else if (commandName === "createchannel") {
-            const channelName = interaction.options.getString("name");
-            const channelToCopy = interaction.options.getChannel("copy_from");
-
-            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS")) {
-                return await interaction.reply({ content: "I do not have permission to manage channels.", ephemeral: true });
-            }
-
-            await interaction.reply({ content: `Creating channel **${channelName}**...`, ephemeral: true });
-
-            try {
-                const options = {
-                    name: channelName,
-                    type: channelToCopy ? channelToCopy.type : ChannelType.GuildText,
-                };
-                if (channelToCopy) {
-                    options.topic = channelToCopy.topic;
-                    options.parent = channelToCopy.parentId;
-                    options.permissionOverwrites = channelToCopy.permissionOverwrites.cache;
-                }
-
-                await interaction.guild.channels.create(options);
-                await interaction.editReply({ content: `✅ Successfully created a new channel named **${channelName}!` });
-            } catch (error) {
-                console.error("Failed to create channel:", error);
-                await interaction.editReply({ content: `❌ Failed to create channel: ${error.message}` });
-            }
-        } else if (commandName === "createcategory") {
-            const categoryName = interaction.options.getString("name");
-            const categoryToCopy = interaction.options.getChannel("copy_from");
-
-            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS")) {
-                return await interaction.reply({ content: "I do not have permission to manage channels.", ephemeral: true });
-            }
-
-            await interaction.reply({ content: `Creating category **${categoryName}**...`, ephemeral: true });
-
-            try {
-                const options = {
-                    name: categoryName,
-                    type: ChannelType.GuildCategory,
-                };
-
-                if (categoryToCopy) {
-                    options.permissionOverwrites = categoryToCopy.permissionOverwrites.cache;
-                }
-
-                await interaction.guild.channels.create(options);
-                await interaction.editReply({ content: `✅ Successfully created a new category named **${categoryName}!` });
-            } catch (error) {
-                console.error("Failed to create category:", error);
-                await interaction.editReply({ content: `❌ Failed to create category: ${error.message}` });
-            }
-        } else if (commandName === "suggestion") {
-            const modal = new ModalBuilder()
-                .setCustomId("suggestionModal")
-                .setTitle("Submit a Suggestion");
-
-            const suggestionInput = new TextInputBuilder()
-                .setCustomId("suggestionInput")
-                .setLabel("Your Suggestion")
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMinLength(10)
-                .setMaxLength(2000);
-
-            const firstActionRow = new ActionRowBuilder().addComponents(suggestionInput);
-
-            modal.addComponents(firstActionRow);
-
-            await interaction.showModal(modal);
         } else if (commandName === "close") {
             const channelToClose = interaction.options.getChannel("channel");
             const guild = interaction.guild;
-            const guildOwnerId = guild.ownerId; // Get the server owner's ID
-            const everyoneRole = guild.roles.everyone; // The @everyone role
+            const guildOwnerId = guild.ownerId; // This gets the server owner's ID
 
-            // Ensure the bot has permissions
-            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS") || !interaction.guild.members.me.permissions.has("MANAGE_PERMISSIONS")) {
-                return await interaction.reply({ content: "I do not have the necessary permissions (Manage Channels, Manage Permissions) to close this channel.", ephemeral: true });
+            // Check for necessary bot permissions
+            const botPermissions = interaction.guild.members.me.permissions;
+            if (!botPermissions.has(PermissionsBitField.Flags.ManageChannels) || !botPermissions.has(PermissionsBitField.Flags.ManageRoles)) {
+                return await interaction.reply({
+                    content: "I need 'Manage Channels' and 'Manage Roles' permissions to use this command.",
+                    ephemeral: true,
+                });
             }
 
-            // Check if the user running the command is allowed to close channels
-            if (!interaction.member.permissions.has("MANAGE_CHANNELS") && interaction.member.id !== guildOwnerId) {
-                return await interaction.reply({ content: "You do not have permission to close channels.", ephemeral: true });
+            // Check if the user has permission to use the command
+            // Either they have the OWNER_ROLE_ID, or they are the server owner
+            const hasOwnerRole = OWNER_ROLE_ID && interaction.member.roles.cache.has(OWNER_ROLE_ID);
+            const isServerOwner = interaction.member.id === guildOwnerId;
+
+            if (!hasOwnerRole && !isServerOwner) {
+                return await interaction.reply({
+                    content: "You do not have permission to use this command. Only server owners or those with the designated owner role can.",
+                    ephemeral: true,
+                });
             }
 
-            // Check if the channel is already locked (or permissions are already changed)
-            // This is a basic check; a more robust check would involve fetching specific permissions
-            const currentEveryonePerms = channelToClose.permissionOverwrites.cache.get(everyoneRole.id);
-            if (currentEveryonePerms && currentEveryonePerms.deny.has("SendMessages")) {
-                return await interaction.reply({ content: `This channel is already locked.`, ephemeral: true });
-            }
-            
-            // Get the current permissions for `@everyone` to restore them later
-            const everyoneOverwrite = channelToClose.permissionOverwrites.cache.get(everyoneRole.id);
-            const originalEveryoneSendMessages = everyoneOverwrite ? everyoneOverwrite.allow.has("SendMessages") : true; // Default to true if no overwrite exists
+            await interaction.reply({
+                content: `🔒 Locking channel ${channelToClose}...`,
+                ephemeral: true,
+            });
 
             try {
-                // Modify permissions for `@everyone`
+                // Get the current permissions for @everyone for this channel
+                const everyoneRole = guild.roles.everyone;
+                const currentEveryonePerms = channelToClose.permissionOverwrites.cache.get(everyoneRole.id);
+                const originalSendMessages = currentEveryonePerms ? currentEveryonePerms.allow.has(PermissionsBitField.Flags.SendMessages) : true; // Default to true if no overwrite exists
+
+                // Deny send message permission for @everyone
                 await channelToClose.permissionOverwrites.edit(everyoneRole, {
-                    SendMessages: false, // Deny sending messages for @everyone
+                    SendMessages: false,
                 });
 
-                // Optionally, you can also explicitly allow the server owner and the command runner
+                // Allow send message permission for the server owner
                 await channelToClose.permissionOverwrites.edit(guildOwnerId, {
-                    SendMessages: true, 
+                    SendMessages: true,
                 });
-                 if (interaction.member.id !== guildOwnerId) { // If command runner isn't the owner
-                    await channelToClose.permissionOverwrites.edit(interaction.member.id, {
-                        SendMessages: true, 
+
+                // Optionally, allow the person who ran the command if they are NOT the server owner
+                // This prevents the command runner from being locked out if they don't have the owner role
+                if (!isServerOwner) {
+                    await channelToClose.permissionOverwrites.edit(interaction.user.id, {
+                        SendMessages: true,
                     });
                 }
+                
+                // Send a message in the channel indicating it's locked
+                const lockMessage = await channelToClose.send(`🔒 This channel has been locked for **24 hours**. Only the server owner and the user who ran this command can send messages. It will be unlocked automatically.`);
 
-                const lockMessage = await interaction.reply({
-                    content: `🔒 The channel ${channelToClose} has been locked for 24 hours. Only the server owner and the person who locked it can send messages. I will re-open it automatically.`,
-                    fetchReply: true
+                await interaction.editReply({
+                    content: `✅ Successfully locked **${channelToClose.name}** for 24 hours.`,
+                    ephemeral: true,
                 });
-
-                // Schedule the channel to be unlocked after 24 hours
+                
+                // Set a timeout to automatically unlock the channel after 24 hours
                 setTimeout(async () => {
                     try {
-                        // Restore original permissions for @everyone
+                        // Restore original @everyone permissions
                         await channelToClose.permissionOverwrites.edit(everyoneRole, {
-                            SendMessages: originalEveryoneSendMessages, // Restore original state
+                             SendMessages: originalSendMessages,
                         });
-
-                        // Optionally remove specific overrides if you added them
-                        await channelToClose.permissionOverwrites.edit(guildOwnerId, {
-                            SendMessages: null // Removes the overwrite
-                        });
-                        if (interaction.member.id !== guildOwnerId) {
-                            await channelToClose.permissionOverwrites.edit(interaction.member.id, {
-                                SendMessages: null // Removes the overwrite
-                            });
+                        
+                        // Remove the specific override for the owner and the command runner (if they weren't the owner)
+                        await channelToClose.permissionOverwrites.delete(guildOwnerId);
+                        if (!isServerOwner) {
+                            await channelToClose.permissionOverwrites.delete(interaction.user.id);
                         }
-
-                        await channelToClose.send("🔓 The channel has been unlocked. You can now send messages again.");
-                        await lockMessage.delete().catch(console.error); // Delete the initial lock message
-                        console.log(`Channel ${channelToClose.name} unlocked after 24 hours.`);
-                    } catch (error) {
-                        console.error(`Error unlocking channel ${channelToClose.name}:`, error);
-                        await channelToClose.send(`⚠️ There was an error automatically unlocking this channel. Please contact a server administrator.`);
+                        
+                        await channelToClose.send("🔓 This channel has been unlocked. You can send messages again.");
+                    } catch (err) {
+                        console.error("Failed to unlock channel:", err);
+                        channelToClose.send("⚠️ There was an error automatically unlocking the channel. Please contact a server administrator to fix this manually.");
                     }
                 }, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
 
             } catch (error) {
                 console.error("Failed to close channel:", error);
-                await interaction.reply({ content: `❌ Failed to close the channel: ${error.message}`, ephemeral: true });
-            }
-        }
-    } else if (interaction.isButton()) {
-        if (interaction.customId === "agree_to_tryout") {
-            await interaction.deferReply({ ephemeral: true });
-
-            await interaction.channel.send(
-                `<@${interaction.user.id}> Thanks for agreeing to the tryout process!`,
-            );
-
-            await interaction.deleteReply();
-        }
-    } else if (interaction.isModalSubmit()) {
-        if (interaction.customId === "suggestionModal") {
-            await interaction.deferReply({ ephemeral: true });
-
-            const suggestion = interaction.fields.getTextInputValue("suggestionInput");
-            const ownerChannel = client.channels.cache.get(SUGGESTIONS_CHANNEL_ID);
-
-            if (ownerChannel) {
-                const suggestionEmbed = new EmbedBuilder()
-                    .setColor(0x0099ff)
-                    .setTitle("New Suggestion")
-                    .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
-                    .setDescription(suggestion)
-                    .setTimestamp();
-                
-                await ownerChannel.send({ embeds: [suggestionEmbed] });
-                
-                await interaction.editReply({
-                    content: "✅ Your suggestion has been submitted successfully!",
+                await interaction.reply({
+                    content: `❌ Failed to close the channel: ${error.message}`,
+                    ephemeral: true,
                 });
-            } else {
-                await interaction.editReply({
-                    content: "❌ Something went wrong. The suggestions channel was not found.",
-                });
-                console.error(`Suggestions channel not found. Check the channel ID: ${SUGGESTIONS_CHANNEL_ID}`);
             }
         }
     }
@@ -569,5 +444,5 @@ server.listen(3000, () => {
     console.log("Web server is running on port 3000");
 });
 
-client.login(process.env.DISCORD_BOT_TOKEN);
-
+// Login to Discord with your client's token
+client.login(DISCORD_BOT_TOKEN);

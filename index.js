@@ -8,7 +8,7 @@ const server = http.createServer((req, res) => {
 });
 
 // IMPORTANT: Replace this with the ID of the private channel where you want to receive suggestions.
-const SUGGESTIONS_CHANNEL_ID = "YOUR_PRIVATE_CHANNEL_ID_HERE";
+const SUGGESTIONS_CHANNEL_ID = "1389958338594472020";
 
 const client = new Client({
     intents: [
@@ -570,3 +570,4 @@ server.listen(3000, () => {
 });
 
 client.login(process.env.DISCORD_BOT_TOKEN);
+

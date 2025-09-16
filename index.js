@@ -15,6 +15,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildInvites, // Needed for managing permissions
     ],
 });
 
@@ -195,6 +196,7 @@ client.on("interactionCreate", async (interaction) => {
                     { name: "/createchannel", value: "Creates a new channel.", inline: true },
                     { name: "/createcategory", value: "Creates a new category.", inline: true },
                     { name: "/suggestion", value: "Submits a suggestion.", inline: true },
+                    { name: "/close", value: "Locks a channel for 24 hours.", inline: true },
                     { name: "/help", value: "Lists all available commands.", inline: true },
                 );
             await interaction.reply({ embeds: [helpEmbed], ephemeral: true });
@@ -443,6 +445,85 @@ client.on("interactionCreate", async (interaction) => {
             modal.addComponents(firstActionRow);
 
             await interaction.showModal(modal);
+        } else if (commandName === "close") {
+            const channelToClose = interaction.options.getChannel("channel");
+            const guild = interaction.guild;
+            const guildOwnerId = guild.ownerId; // Get the server owner's ID
+            const everyoneRole = guild.roles.everyone; // The @everyone role
+
+            // Ensure the bot has permissions
+            if (!interaction.guild.members.me.permissions.has("MANAGE_CHANNELS") || !interaction.guild.members.me.permissions.has("MANAGE_PERMISSIONS")) {
+                return await interaction.reply({ content: "I do not have the necessary permissions (Manage Channels, Manage Permissions) to close this channel.", ephemeral: true });
+            }
+
+            // Check if the user running the command is allowed to close channels
+            if (!interaction.member.permissions.has("MANAGE_CHANNELS") && interaction.member.id !== guildOwnerId) {
+                return await interaction.reply({ content: "You do not have permission to close channels.", ephemeral: true });
+            }
+
+            // Check if the channel is already locked (or permissions are already changed)
+            // This is a basic check; a more robust check would involve fetching specific permissions
+            const currentEveryonePerms = channelToClose.permissionOverwrites.cache.get(everyoneRole.id);
+            if (currentEveryonePerms && currentEveryonePerms.deny.has("SendMessages")) {
+                return await interaction.reply({ content: `This channel is already locked.`, ephemeral: true });
+            }
+            
+            // Get the current permissions for `@everyone` to restore them later
+            const everyoneOverwrite = channelToClose.permissionOverwrites.cache.get(everyoneRole.id);
+            const originalEveryoneSendMessages = everyoneOverwrite ? everyoneOverwrite.allow.has("SendMessages") : true; // Default to true if no overwrite exists
+
+            try {
+                // Modify permissions for `@everyone`
+                await channelToClose.permissionOverwrites.edit(everyoneRole, {
+                    SendMessages: false, // Deny sending messages for @everyone
+                });
+
+                // Optionally, you can also explicitly allow the server owner and the command runner
+                await channelToClose.permissionOverwrites.edit(guildOwnerId, {
+                    SendMessages: true, 
+                });
+                 if (interaction.member.id !== guildOwnerId) { // If command runner isn't the owner
+                    await channelToClose.permissionOverwrites.edit(interaction.member.id, {
+                        SendMessages: true, 
+                    });
+                }
+
+                const lockMessage = await interaction.reply({
+                    content: `🔒 The channel ${channelToClose} has been locked for 24 hours. Only the server owner and the person who locked it can send messages. I will re-open it automatically.`,
+                    fetchReply: true
+                });
+
+                // Schedule the channel to be unlocked after 24 hours
+                setTimeout(async () => {
+                    try {
+                        // Restore original permissions for @everyone
+                        await channelToClose.permissionOverwrites.edit(everyoneRole, {
+                            SendMessages: originalEveryoneSendMessages, // Restore original state
+                        });
+
+                        // Optionally remove specific overrides if you added them
+                        await channelToClose.permissionOverwrites.edit(guildOwnerId, {
+                            SendMessages: null // Removes the overwrite
+                        });
+                        if (interaction.member.id !== guildOwnerId) {
+                            await channelToClose.permissionOverwrites.edit(interaction.member.id, {
+                                SendMessages: null // Removes the overwrite
+                            });
+                        }
+
+                        await channelToClose.send("🔓 The channel has been unlocked. You can now send messages again.");
+                        await lockMessage.delete().catch(console.error); // Delete the initial lock message
+                        console.log(`Channel ${channelToClose.name} unlocked after 24 hours.`);
+                    } catch (error) {
+                        console.error(`Error unlocking channel ${channelToClose.name}:`, error);
+                        await channelToClose.send(`⚠️ There was an error automatically unlocking this channel. Please contact a server administrator.`);
+                    }
+                }, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
+
+            } catch (error) {
+                console.error("Failed to close channel:", error);
+                await interaction.reply({ content: `❌ Failed to close the channel: ${error.message}`, ephemeral: true });
+            }
         }
     } else if (interaction.isButton()) {
         if (interaction.customId === "agree_to_tryout") {

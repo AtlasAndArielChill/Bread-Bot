@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, Routes } = require("discord.js");
+const { SlashCommandBuilder, Routes, ChannelType } = require("discord.js");
 const { REST } = require("@discordjs/rest");
 
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -39,20 +39,18 @@ const commands = [
     new SlashCommandBuilder()
         .setName("createrole")
         .setDescription(
-            "Creates a new role with settings copied from an existing role."
+            "Creates a new role with settings copied from an existing one.",
         )
         .addStringOption((option) =>
             option
                 .setName("name")
-                .setDescription("The name for the new role.")
+                .setDescription("The name of the new role.")
                 .setRequired(true),
         )
         .addRoleOption((option) =>
             option
                 .setName("copy_from")
-                .setDescription(
-                    "The role to copy permissions, color, etc. from."
-                )
+                .setDescription("The role to copy settings from.")
                 .setRequired(true),
         ),
     new SlashCommandBuilder()
@@ -103,8 +101,7 @@ const commands = [
         .addUserOption((option) =>
             option
                 .setName("user")
-                .setDescription("The user to get the avatar of.")
-                .setRequired(false),
+                .setDescription("The user to get the avatar from."),
         ),
     new SlashCommandBuilder()
         .setName("help")
@@ -141,7 +138,7 @@ const commands = [
         ),
     new SlashCommandBuilder()
         .setName("warn")
-        .setDescription("Warns a user.")
+        .setDescription("Warns a user in the server.")
         .addUserOption((option) =>
             option
                 .setName("user")
@@ -160,18 +157,12 @@ const commands = [
         .addIntegerOption((option) =>
             option
                 .setName("amount")
-                .setDescription("The number of messages to delete (1-100).")
+                .setDescription("The number of messages to delete.")
                 .setRequired(true),
         ),
     new SlashCommandBuilder()
         .setName("embed")
         .setDescription("Sends a custom embed message.")
-        .addChannelOption((option) =>
-            option
-                .setName("channel")
-                .setDescription("The channel to send the embed to.")
-                .setRequired(true),
-        )
         .addStringOption((option) =>
             option
                 .setName("title")
@@ -181,14 +172,20 @@ const commands = [
         .addStringOption((option) =>
             option
                 .setName("description")
-                .setDescription("The description of the embed.")
+                .setDescription("The description/body of the embed.")
                 .setRequired(true),
         )
         .addStringOption((option) =>
             option
                 .setName("color")
-                .setDescription("The hex color of the embed (e.g., #FF0000).")
-                .setRequired(false),
+                .setDescription("The hex color code (e.g., #0099FF).")
+                .setRequired(true),
+        )
+        .addChannelOption((option) =>
+            option
+                .setName("channel")
+                .setDescription("The channel to send the embed to.")
+                .setRequired(true),
         )
         .addStringOption((option) =>
             option
@@ -199,7 +196,7 @@ const commands = [
         .addStringOption((option) =>
             option
                 .setName("author_url")
-                .setDescription("A URL for the author's link.")
+                .setDescription("A URL for the author's name.")
                 .setRequired(false),
         )
         .addStringOption((option) =>
@@ -239,51 +236,14 @@ const commands = [
                 .setRequired(false),
         ),
     new SlashCommandBuilder()
-        .setName("tryouts")
-        .setDescription("Starts the tryout process."),
-    new SlashCommandBuilder()
-        .setName("createchannel")
-        .setDescription("Creates a new channel in the server.")
-        .addStringOption((option) =>
-            option
-                .setName("name")
-                .setDescription("The name for the new channel.")
-                .setRequired(true),
-        )
-        .addChannelOption((option) =>
-            option
-                .setName("copy_from")
-                .setDescription("The channel to copy permissions from.")
-                .setRequired(false),
-        ),
-    new SlashCommandBuilder()
-        .setName("createcategory")
-        .setDescription("Creates a new category in the server.")
-        .addStringOption((option) =>
-            option
-                .setName("name")
-                .setDescription("The name for the new category.")
-                .setRequired(true),
-        )
-        .addChannelOption((option) =>
-            option
-                .setName("copy_from")
-                .setDescription("The category to copy permissions from.")
-                .setRequired(false),
-        ),
-    new SlashCommandBuilder()
-        .setName("suggestion")
-        .setDescription("Submits a suggestion to the server owner."),
-    // NEW COMMAND: /close
-    new SlashCommandBuilder()
         .setName("close")
-        .setDescription("Locks a channel for 24 hours, allowing only the server owner to speak.")
+        .setDescription("Locks a channel for 24 hours.")
         .addChannelOption((option) =>
             option
                 .setName("channel")
                 .setDescription("The channel to lock.")
                 .setRequired(true)
-                .addChannelTypes(ChannelType.GuildText) // Ensure it's a text channel
+                .addChannelTypes(ChannelType.GuildText),
         ),
 ].map((command) => command.toJSON());
 
